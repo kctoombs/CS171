@@ -17,16 +17,39 @@ class paxos(object):
         self.numVotes = numVotes
         self.numAccept = numAccept
 
+def printFiles(theList):
+    #theList in this case is the PRM list
+    for data in theList:
+        print(data.acceptVal[0])  #Index 0 is the filename
+
+
+def total(theList):
+    #theList in this case is the list of files
+    words = dict()
+    for filename in theList:
+        with open(filename) as f:
+            for line in f.readlines():
+                currentLine = line.split()
+                word = currentLine[0]
+                count = int(currentLine[1])
+                if(word in words.keys()):
+                    oldCount = words.get(word)
+                    newCount = int(oldCount + count)
+                    words[word] = newCount
+                else:
+                    words[word] = count
+    print(words)
+    
+
 #Initialize server
 server = socket(AF_INET, SOCK_STREAM)
 server.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
 
 mySiteid = sys.argv[1]   #ID of this site
-setupFile = sys.argv[2]  #Setup file 
+setupFile = sys.argv[2]  #Setup file
+print("Establishing connections...")
 with open(setupFile) as f:
     numSites = f.readline().strip()   #Number of sites
-    sys.stdout.write(mySiteid)
-    #numSites = f.readline().strip()  #Number of sites in DS
     
     for i in range(int(numSites)):
         line = f.readline().strip().split()
@@ -34,7 +57,7 @@ with open(setupFile) as f:
     
     #print(siteData[int(mySiteid) - 1][1])
     server.bind(('', int(siteData[int(mySiteid) - 1][1])))
-    server.listen(5)
+    server.listen(3)
     
     for line in f.readlines():
         #Establish Connections with other sites
@@ -44,8 +67,8 @@ with open(setupFile) as f:
         if(nums[0] == mySiteid):
             ip = siteData[int(nums[1])-1][0]
             port = siteData[int(nums[1])-1][1]
-            print(ip)
-            print(port)
+            #print(ip)
+            #print(port)
             s = socket(AF_INET, SOCK_STREAM)
             addr = (ip, int(port))
             time.sleep(5)
@@ -66,8 +89,15 @@ with open(setupFile) as f:
             #sys.stdout.write("Incoming: ")
             #print(incomingConnections)
 
-print(incomingConnections)
-print(outgoingConnections)
+#print(incomingConnections)
+#print(outgoingConnections)
 
 print("Ready to process commands...")
+'''
 #Set up command line interface
+for line in sys.stdin:
+    print(line)
+'''
+
+files = ["file1.txt", "file2.txt", "file3.txt"]
+total(files)
