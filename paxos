@@ -38,7 +38,18 @@ def total(theList):
                     words[word] = newCount
                 else:
                     words[word] = count
-    print(words)
+    return words
+
+def total2(theList):
+    totalCount = 0
+    for filename in theList:
+        with open(filename) as f:
+            for line in f.readlines():
+                currentLine = line.split()
+                #word = currentLine[0]
+                count = int(currentLine[1])
+                totalCount += count
+    return totalCount
     
 
 #Initialize server
@@ -100,4 +111,5 @@ for line in sys.stdin:
 '''
 
 files = ["file1.txt", "file2.txt", "file3.txt"]
-total(files)
+num = total2(files)
+print(num)
