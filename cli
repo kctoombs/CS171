@@ -1,5 +1,22 @@
 #!/usr/bin/env python3
 import sys
+import time
+from socket import *
+
+#2nd and 3rd arguments will be ports of mappers.
+#4th argument will be port of reducer.
+
+#map1Port = sys.argv[2]
+#map2Port = sys.argv[3]
+#reducerPort = sys.argv[4]
+
+ip = '127.0.0.1'
+port = sys.argv[1] #First argument is port of PRM for this CLI
+sock = socket(AF_INET, SOCK_STREAM)
+addr = (ip, int(port))
+time.sleep(5)
+print("Connecting to PRM...")
+sock.connect(addr)
 
 #Set up command line interface
 for line in sys.stdin:
@@ -8,28 +25,44 @@ for line in sys.stdin:
 
     if(line[0] == "map"):
         #Map function, send to one of the mappers
-
+        print("map")
+        
     elif(line[0] == "reduce"):
         #Reduce funciton, send to reducer
-
+        print("reduce")
+        
     elif(line[0] == "replicate"):
         #Replicate funciton, send to PRM
+        fname = line[1]
+        data = "replicate " + fname + "*"
+        sock.sendall(data.encode())  #Send a replicate   
         
     elif(line[0] == "stop"):
         #Stop function, send to PRM
+        sock.sendall("stop*".encode())  #Send a stop msg
 
     elif(line[0] == "resume"):
         #Resume function, send to PRM
+        sock.sendall("resume*".encode())
 
     elif(line[0] == "total"):
         #Total function, send to PRM
-
+        data = ""
+        for i in range(len(line)):
+            data += line[i] + " "
+        data += "*"
+        sock.sendall(data.encode())
+            
     elif(line[0] == "print"):
         #Print funciton, send to PRM
+        sock.sendall("print*")
 
     elif(line[0] == "merge"):
         #Merge function, send to PRM
-
+        f1 = line[1]
+        f2 = line[2]
+        data = "merge " + f1 + " " + f2 + "*" 
+        sock.sendall(data.encode())
     else:
-        print("Command not recognized. Make sure commands don't use capital letters")
+        print("Command not recognized. Make sure commands don't include capital letters")
 
