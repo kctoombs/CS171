@@ -1,0 +1,73 @@
+#!/usr/bin/env python3
+import sys
+import time
+from socket import *
+
+PRM = []  #Holds all Paxos instances
+incomingConnections = [] #Maintains incoming connections
+outgoingConnections = [] #Maintains outgoing connections
+siteData = []  #Contains IP and Port of all sites in order of siteNum
+
+class paxos(object):
+
+    def __init__(self, numAccept, ballotNum = (0,0), acceptBallot = (0, 0), acceptVal = None, numVotes = 0):
+        self.ballotNum = ballotNum
+        self.acceptBallot = acceptBallot
+        self.acceptVal = acceptVal   #File/Dictionary pair
+        self.numVotes = numVotes
+        self.numAccept = numAccept
+
+#Initialize server
+server = socket(AF_INET, SOCK_STREAM)
+server.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+
+mySiteid = sys.argv[1]   #ID of this site
+setupFile = sys.argv[2]  #Setup file 
+with open(setupFile) as f:
+    numSites = f.readline().strip()   #Number of sites
+    sys.stdout.write(mySiteid)
+    #numSites = f.readline().strip()  #Number of sites in DS
+    
+    for i in range(int(numSites)):
+        line = f.readline().strip().split()
+        siteData.append([data for data in line])
+    
+    #print(siteData[int(mySiteid) - 1][1])
+    server.bind(('', int(siteData[int(mySiteid) - 1][1])))
+    server.listen(5)
+    
+    for line in f.readlines():
+        #Establish Connections with other sites
+        nums = line.strip().split()
+        #print(mySiteid)
+        #print(nums[0])
+        if(nums[0] == mySiteid):
+            ip = siteData[int(nums[1])-1][0]
+            port = siteData[int(nums[1])-1][1]
+            print(ip)
+            print(port)
+            s = socket(AF_INET, SOCK_STREAM)
+            addr = (ip, int(port))
+            time.sleep(5)
+            try:
+                s.connect(addr)
+                print("Connected to ", (nums[1]))
+            except error:
+                time.sleep(2)
+            #Add socket to outgoing connections
+            outgoingConnections.append(s)
+            #sys.stdout.write("Outgoing: ")
+            #print(outgoingConnections)
+        if(nums[1] == mySiteid):
+            #Incoming connection
+            conn, addr = server.accept()
+            #print("Got connection from ", (nums[0]))
+            incomingConnections.append(conn)
+            #sys.stdout.write("Incoming: ")
+            #print(incomingConnections)
+
+print(incomingConnections)
+print(outgoingConnections)
+
+print("Ready to process commands...")
+#Set up command line interface
