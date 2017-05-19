@@ -15,7 +15,7 @@ class paxos(object):
         self.acceptBallot = acceptBallot
         self.acceptVal = acceptVal   #File/Dictionary pair
         self.numVotes = numVotes
-        self.numAccept = numAccept
+        self.numAccept = numAccept   #Do we need this?
 
 def printFiles(theList):
     #theList in this case is the PRM list
@@ -23,7 +23,7 @@ def printFiles(theList):
         print(data.acceptVal[0])  #Index 0 is the filename
 
 
-def total(theList):
+def merge(theList):
     #theList in this case is the list of files
     words = dict()
     for filename in theList:
@@ -40,7 +40,7 @@ def total(theList):
                     words[word] = count
     return words
 
-def total2(theList):
+def total(theList):
     totalCount = 0
     for filename in theList:
         with open(filename) as f:
@@ -104,12 +104,7 @@ with open(setupFile) as f:
 #print(outgoingConnections)
 
 print("Ready to process commands...")
-'''
-#Set up command line interface
-for line in sys.stdin:
-    print(line)
-'''
 
 files = ["file1.txt", "file2.txt", "file3.txt"]
-num = total2(files)
+num = total(files)
 print(num)

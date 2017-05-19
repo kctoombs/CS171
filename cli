@@ -1,0 +1,35 @@
+#!/usr/bin/env python3
+import sys
+
+#Set up command line interface
+for line in sys.stdin:
+    print(line)
+    theLine = line.split()
+
+    if(line[0] == "map"):
+        #Map function, send to one of the mappers
+
+    elif(line[0] == "reduce"):
+        #Reduce funciton, send to reducer
+
+    elif(line[0] == "replicate"):
+        #Replicate funciton, send to PRM
+        
+    elif(line[0] == "stop"):
+        #Stop function, send to PRM
+
+    elif(line[0] == "resume"):
+        #Resume function, send to PRM
+
+    elif(line[0] == "total"):
+        #Total function, send to PRM
+
+    elif(line[0] == "print"):
+        #Print funciton, send to PRM
+
+    elif(line[0] == "merge"):
+        #Merge function, send to PRM
+
+    else:
+        print("Command not recognized. Make sure commands don't use capital letters")
+
