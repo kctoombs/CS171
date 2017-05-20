@@ -10,13 +10,30 @@ from socket import *
 #map2Port = sys.argv[3]
 #reducerPort = sys.argv[4]
 
+myIncomingConnections = []
+myOutgoingConnections = []
+
 ip = '127.0.0.1'
-port = sys.argv[1] #First argument is port of PRM for this CLI
+myPort = sys.argv[1] #First argument is port of CLI
+prmPort = sys.argv[2] #Second argument is port of PRM for this CLI
 sock = socket(AF_INET, SOCK_STREAM)
-addr = (ip, int(port))
+addr = (ip, int(prmPort))
 time.sleep(5)
 print("Connecting to PRM...")
 sock.connect(addr)
+myOutgoingConnections.append(sock)
+
+#Initialize server for PRM
+server = socket(AF_INET, SOCK_STREAM)
+server.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+server.bind(('', int(myPort)))
+server.listen(10)
+conn, addr = server.accept()
+myIncomingConnections.append(conn)
+
+print(myIncomingConnections)
+print(myOutgoingConnections)
+            
 
 #Set up command line interface
 for line in sys.stdin:

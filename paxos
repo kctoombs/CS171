@@ -15,7 +15,7 @@ class paxos(object):
         self.acceptBallot = acceptBallot
         self.acceptVal = acceptVal   #File/Dictionary pair
         self.numVotes = numVotes
-        self.numAccept = numAccept   #Do we need this?
+        self.numAccept = numAccept   
 
 def printFiles(theList):
     #theList in this case is the PRM list
@@ -68,7 +68,7 @@ with open(setupFile) as f:
     
     #print(siteData[int(mySiteid) - 1][1])
     server.bind(('', int(siteData[int(mySiteid) - 1][1])))
-    server.listen(3)
+    server.listen(10)
     
     for line in f.readlines():
         #Establish Connections with other sites
@@ -100,11 +100,25 @@ with open(setupFile) as f:
             #sys.stdout.write("Incoming: ")
             #print(incomingConnections)
 
+#Receive the connection from the CLI
+conn, addr = server.accept()
+incomingConnections.append(conn)
+print(conn)
+print(addr)
+
+#Open a connection with the CLI
+cliPort = int(siteData[int(mySiteid) - 1][1]) + 3  #3 greater than the port of this site
+cliIP = '127.0.0.1'
+s = socket(AF_INET, SOCK_STREAM)
+addr = (cliIP, cliPort)
+time.sleep(5)
+s.connect(addr)
+
 #print(incomingConnections)
 #print(outgoingConnections)
 
 print("Ready to process commands...")
 
-files = ["file1.txt", "file2.txt", "file3.txt"]
-num = total(files)
-print(num)
+#files = ["file1.txt", "file2.txt", "file3.txt"]
+#num = total(files)
+#print(num)
