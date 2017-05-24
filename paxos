@@ -5,17 +5,19 @@ import select
 from socket import *
 
 PRM = []  #Holds all Paxos instances
-incomingConnections = [] #Maintains incoming connections
-outgoingConnections = [] #Maintains outgoing connections
+incomingConnections = dict() #Maintains incoming connections
+outgoingConnections = dict() #Maintains outgoing connections
 siteData = []  #Contains IP and Port of all sites in order of siteNum
+ackList = []   #Contains acks received from other sites
 
-class paxos(object):
+class Paxos(object):
 
-    def __init__(self, numAccept, ballotNum = (0,0), acceptBallot = (0, 0), acceptVal = None, numVotes = 0):
+    def __init__(self, numAccept, ballotNum = (0, 0), acceptBallot = (0, 0),
+                 acceptVal = ("-1", "-1"), numVotes = 1):
         self.ballotNum = ballotNum
         self.acceptBallot = acceptBallot
         self.acceptVal = acceptVal   #File/Dictionary pair
-        self.numVotes = numVotes
+        self.numVotes = numVotes    #Starts at 1 cuz a process votes for itself
         self.numAccept = numAccept   
 
 def printFiles(theList):
@@ -60,22 +62,44 @@ def receive(channels):
         if(ready[0]):
             theData = sock.recv(1024).decode()
             splitData = theData.split("*")
-            for data in splitData:
-                if(str(data).find("merge") != -1):
-                    print("merge")
-                elif(str(data).find("total") != -1):
-                    print("total")
-                elif(str(data).find("replicate") != -1):
-                    print("replicate")
-                elif(str(data).find("stop") != -1):
-                    print("stop")
-                elif(str(data).find("resume") != -1):
-                    print("resume")
-                elif(str(data).find("print") != -1):
-                    print("print")
-                else:
-                    continue
+            dataList = splitData[0].split()
+            print(dataList)
+            #for data in splitData:
+            if(dataList[0].find("merge") != -1):
+                print("merge")
+            elif(dataList[0].find("total") != -1):
+                print("total")
+            elif(dataList[0].find("replicate") != -1):
+                print("replicate")
+            elif(dataList[0].find("stop") != -1):
+                print("stop")
+            elif(dataList[0].find("resume") != -1):
+                print("resume")
+            elif(dataList[0].find("print") != -1):
+                print("print")
+            elif(dataList[0].find("prepare") != -1):
+                print("prepare")
+                bal = dataList[1]    #Ballot
+                siteid = dataList[2] #id of site it came from
+                if(prmObj.ballotNum[0] < bal or prmObj.ballotNum[1] < siteid):
+                    prmObj.ballotNum[0] = bal
+                    prmObj.ballotNum[1] = siteid
+                    toSend = "ack " + str(prmObj.ballotNum[0]) + " "  + str(prmObj.ballotNum[1]) + " " + str(prmObj.acceptBallot[0]) + " " + str(prmObj.acceptBallot[1]) + " " + prmObj.acceptVal[0] + " " + prmObj.acceptVal[1] + " "  + mySiteid + "*"
+                    sock = outgoingConnections.get(ballotNum[1]) #Get socket associated w id
+                    sock.sendall(toSend.encode())
+            elif(dataList[0].find("ack") != -1):
+                print("ack")
+                #Check if site has acks from majority
+                #If yes and all vals are null, then acceptVal = my initial proposed val
+                #Else acceptVal = received val with highest ballot num
+                #Send accept, ballotNum, acceptVal to all
+            else:
+                continue
     return
+
+#Create prm object
+prmObj = Paxos(0)
+
 
 #Initialize server
 server = socket(AF_INET, SOCK_STREAM)
@@ -114,20 +138,20 @@ with open(setupFile) as f:
             except error:
                 time.sleep(2)
             #Add socket to outgoing connections
-            outgoingConnections.append(s)
+            outgoingConnections[nums[1]] = s
             #sys.stdout.write("Outgoing: ")
             #print(outgoingConnections)
         if(nums[1] == mySiteid):
             #Incoming connection
             conn, addr = server.accept()
             #print("Got connection from ", (nums[0]))
-            incomingConnections.append(conn)
+            incomingConnections[nums[0]] = conn
             #sys.stdout.write("Incoming: ")
             #print(incomingConnections)
 
 #Receive the connection from the CLI
 conn, addr = server.accept()
-incomingConnections.append(conn)
+incomingConnections["cli"] = conn
 print(conn)
 print(addr)
 
@@ -138,6 +162,7 @@ s = socket(AF_INET, SOCK_STREAM)
 addr = (cliIP, cliPort)
 time.sleep(5)
 s.connect(addr)
+outgoingConnections["cli"] = s
 
 #print(incomingConnections)
 #print(outgoingConnections)

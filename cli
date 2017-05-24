@@ -47,8 +47,8 @@ for line in sys.stdin:
             continue
         print("map")
         fname = theLine[1]
-        offset = int(theLine[2])
-        size = int(theLine[3])
+        offset = theLine[2]
+        size = theLine[3]
         
     elif(theLine[0] == "reduce"):
         #Reduce funciton, send to reducer
@@ -58,7 +58,7 @@ for line in sys.stdin:
         print("reduce")
         files = ""
         for i in range(1, len(theLine)):
-            files += line[i] + " "
+            files += theLine[i] + " "
         files += "*"
         #SomeSocket.sendall(files.encode())
         
@@ -91,8 +91,8 @@ for line in sys.stdin:
             print("Usage: total [pos1] [pos2] ...")
             continue
         data = "total "
-        for i in range(len(line)):
-            data += line[i] + " "
+        for i in range(len(theLine)):
+            data += theLine[i] + " "
         data += "*"
         sock.sendall(data.encode())
             
@@ -108,8 +108,8 @@ for line in sys.stdin:
         if(len(theLine) != 3):
             print("Usage: merge [pos1] [pos2]")
             continue
-        f1 = line[1]
-        f2 = line[2]
+        f1 = theLine[1]
+        f2 = theLine[2]
         data = "merge " + f1 + " " + f2 + "*" 
         sock.sendall(data.encode())
     else:
