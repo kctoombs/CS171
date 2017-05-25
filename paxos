@@ -57,6 +57,7 @@ def merge(theList):
                     words[word] = newCount
                 else:
                     words[word] = count
+    print(words)
     return words
 
 def total(theList):
@@ -104,6 +105,11 @@ def receive(channels):
                 continue
             elif(dataList[0].find("merge") != -1):
                 print("merge")
+                #dataList[1] and dataList[2] are the positions
+                f1 = PRM[int(dataList[1])][0]
+                f2 = PRM[int(dataList[2])][0]
+                fileList = [f1, f2]
+                merge(fileList)
             elif(dataList[0].find("total") != -1):
                 print("total")
             elif(dataList[0].find("replicate") != -1):
@@ -123,6 +129,7 @@ def receive(channels):
                 isStopped = True
             elif(dataList[0].find("resume") != -1):
                 print("resume")
+                isStopped = False
             elif(dataList[0].find("print") != -1):
                 print("print")
                 printFiles(PRM)
