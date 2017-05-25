@@ -22,17 +22,22 @@ time.sleep(5)
 print("Connecting to PRM...")
 sock.connect(addr)
 myOutgoingConnections.append(sock)
+print("Connected")
 
 #Initialize server for PRM
 server = socket(AF_INET, SOCK_STREAM)
 server.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
 server.bind(('', int(myPort)))
 server.listen(10)
+print("Receiving connection from PRM...")
 conn, addr = server.accept()
 myIncomingConnections.append(conn)
+print("Connection received")
 
-print(myIncomingConnections)
-print(myOutgoingConnections)
+#print(myIncomingConnections)
+#print(myOutgoingConnections)
+
+#Call receive after every command instead of running a thread in the background
             
 
 #Set up command line interface
@@ -115,4 +120,3 @@ for line in sys.stdin:
     else:
         print("Command not recognized. Make sure commands don't include capital letters")
         continue
-
