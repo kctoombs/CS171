@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import sys
 import time
+import select
 from socket import *
 
 #2nd and 3rd arguments will be ports of mappers.
@@ -10,9 +11,20 @@ from socket import *
 #map2Port = sys.argv[3]
 #reducerPort = sys.argv[4]
 
-myIncomingConnections = []
-myOutgoingConnections = []
+myIncomingConnections = dict()
+myOutgoingConnections = dict()
 
+def receive(channels):
+    for c in channels.keys():
+        sock = channels.get(c)
+        ready = select.select([sock], [], [], 1)
+        if(ready[0]):
+            theData = sock.recv(1024).decode()
+            print(theData)
+    return
+
+
+#Connect to PRM
 ip = '127.0.0.1'
 myPort = sys.argv[1] #First argument is port of CLI
 prmPort = sys.argv[2] #Second argument is port of PRM for this CLI
@@ -21,7 +33,7 @@ addr = (ip, int(prmPort))
 time.sleep(5)
 print("Connecting to PRM...")
 sock.connect(addr)
-myOutgoingConnections.append(sock)
+myOutgoingConnections["prm"] = sock
 print("Connected")
 
 #Initialize server for PRM
@@ -31,7 +43,7 @@ server.bind(('', int(myPort)))
 server.listen(10)
 print("Receiving connection from PRM...")
 conn, addr = server.accept()
-myIncomingConnections.append(conn)
+myIncomingConnections["prm"] = conn
 print("Connection received")
 
 #print(myIncomingConnections)
@@ -42,7 +54,6 @@ print("Connection received")
 
 #Set up command line interface
 for line in sys.stdin:
-    print(line)
     theLine = line.split()
 
     if(theLine[0] == "map"):
@@ -50,7 +61,6 @@ for line in sys.stdin:
         if(len(theLine) != 4):
             print("Usage: map [file] [offset] [size]")
             continue
-        print("map")
         fname = theLine[1]
         offset = theLine[2]
         size = theLine[3]
@@ -60,7 +70,6 @@ for line in sys.stdin:
         if(len(theLine) < 2):
             print("Usage: reduce [fname1] [fname2] ...")
             continue
-        print("reduce")
         files = ""
         for i in range(1, len(theLine)):
             files += theLine[i] + " "
@@ -74,7 +83,9 @@ for line in sys.stdin:
             continue
         fname = theLine[1]
         data = "replicate " + fname + "*"
-        sock.sendall(data.encode())  #Send a replicate   
+        sock.sendall(data.encode())  #Send a replicate
+        time.sleep(5)
+        receive(myIncomingConnections)
         
     elif(theLine[0] == "stop"):
         #Stop function, send to PRM
@@ -82,24 +93,30 @@ for line in sys.stdin:
             print("Usage: stop")
             continue
         sock.sendall("stop*".encode())  #Send a stop msg
-
+        time.sleep(1)
+        receive(myIncomingConnections)
+        
     elif(theLine[0] == "resume"):
         #Resume function, send to PRM
         if(len(theLine) != 1):
             print("Usage: resume")
             continue
         sock.sendall("resume*".encode())
-
+        time.sleep(1)
+        receive(myIncomingConnections)
+        
     elif(theLine[0] == "total"):
         #Total function, send to PRM
         if(len(theLine) < 2):
             print("Usage: total [pos1] [pos2] ...")
             continue
         data = "total "
-        for i in range(len(theLine)):
+        for i in range(1, len(theLine)):
             data += theLine[i] + " "
         data += "*"
         sock.sendall(data.encode())
+        time.sleep(1)
+        receive(myIncomingConnections)
             
     elif(theLine[0] == "print"):
         #Print funciton, send to PRM
@@ -107,6 +124,8 @@ for line in sys.stdin:
             print("Usage: print")
             continue
         sock.sendall("print*".encode())
+        time.sleep(1)
+        receive(myIncomingConnections)
 
     elif(theLine[0] == "merge"):
         #Merge function, send to PRM
