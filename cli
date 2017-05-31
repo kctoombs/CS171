@@ -15,12 +15,15 @@ myIncomingConnections = dict()
 myOutgoingConnections = dict()
 
 def receive(channels):
-    for c in channels.keys():
-        sock = channels.get(c)
-        ready = select.select([sock], [], [], 1)
-        if(ready[0]):
-            theData = sock.recv(1024).decode()
-            print(theData)
+    received = False
+    while(not received):
+        for c in channels.keys():
+            sock = channels.get(c)
+            ready = select.select([sock], [], [], 1)
+            if(ready[0]):
+                theData = sock.recv(1024).decode()
+                print(theData)
+                received = True
     return
 
 
@@ -84,7 +87,6 @@ for line in sys.stdin:
         fname = theLine[1]
         data = "replicate " + fname + "*"
         sock.sendall(data.encode())  #Send a replicate
-        time.sleep(5)
         receive(myIncomingConnections)
         
     elif(theLine[0] == "stop"):
@@ -93,7 +95,6 @@ for line in sys.stdin:
             print("Usage: stop")
             continue
         sock.sendall("stop*".encode())  #Send a stop msg
-        time.sleep(1)
         receive(myIncomingConnections)
         
     elif(theLine[0] == "resume"):
@@ -102,7 +103,6 @@ for line in sys.stdin:
             print("Usage: resume")
             continue
         sock.sendall("resume*".encode())
-        time.sleep(1)
         receive(myIncomingConnections)
         
     elif(theLine[0] == "total"):
@@ -115,7 +115,6 @@ for line in sys.stdin:
             data += theLine[i] + " "
         data += "*"
         sock.sendall(data.encode())
-        time.sleep(1)
         receive(myIncomingConnections)
             
     elif(theLine[0] == "print"):
@@ -124,7 +123,6 @@ for line in sys.stdin:
             print("Usage: print")
             continue
         sock.sendall("print*".encode())
-        time.sleep(1)
         receive(myIncomingConnections)
 
     elif(theLine[0] == "merge"):
@@ -136,6 +134,11 @@ for line in sys.stdin:
         f2 = theLine[2]
         data = "merge " + f1 + " " + f2 + "*" 
         sock.sendall(data.encode())
+    elif(theLine[0] == "quit"):
+        #Merge function, send to PRM
+        if(len(theLine) != 1):
+            print("Usage: quit")
+        sock.sendall("quit*".encode())
     else:
         print("Command not recognized. Make sure commands don't include capital letters")
         continue
