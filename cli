@@ -114,7 +114,7 @@ for line in sys.stdin:
         fname = theLine[1]
         offset = theLine[2]
         size = theLine[3]
-        toSend = fname + " " + offset + " " + size
+        toSend = "map " + fname + " " + offset + " " + size
         map1Sock.sendall(toSend.encode())
         
     elif(theLine[0] == "reduce"):
