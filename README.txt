@@ -15,3 +15,12 @@ All paxos processes connect to each other (~20 seconds)
 ./cli 5005 5002
 ./cli 5006 5003
 All CLIs connect to their PRMs (~10 seconds)
+
+Order of execution: Start PRMs, then Mappers, then reducer, then CLI
+
+5/31/17, 5:31 PM:
+A sample run looks like this (for one node):
+./paxos 1 setup.txt&
+./mapper 5007 5004&  (listening on port 5007)
+./reducer 5010 5004  (listening on port 5010)
+./cli 5004 5001 5007 5010  (listening on port 5004, prm is 5001, 5007 is mapper, 5010 is reducer)

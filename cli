@@ -7,9 +7,9 @@ from socket import *
 #2nd and 3rd arguments will be ports of mappers.
 #4th argument will be port of reducer.
 
-#map1Port = sys.argv[2]
-#map2Port = sys.argv[3]
-#reducerPort = sys.argv[4]
+map1Port = sys.argv[3]
+#map2Port = sys.argv[4]
+reducerPort = sys.argv[4]
 
 myIncomingConnections = dict()
 myOutgoingConnections = dict()
@@ -31,23 +31,70 @@ def receive(channels):
 ip = '127.0.0.1'
 myPort = sys.argv[1] #First argument is port of CLI
 prmPort = sys.argv[2] #Second argument is port of PRM for this CLI
-sock = socket(AF_INET, SOCK_STREAM)
-addr = (ip, int(prmPort))
+prmSock = socket(AF_INET, SOCK_STREAM)
+prmAddr = (ip, int(prmPort))
 time.sleep(5)
-print("Connecting to PRM...")
-sock.connect(addr)
-myOutgoingConnections["prm"] = sock
-print("Connected")
+print("CLI connecting to PRM...")
+prmSock.connect(prmAddr)
+myOutgoingConnections["prm"] = prmSock
+print("CLI connected to PRM")
 
-#Initialize server for PRM
+#Initialize server for PRM, Mappers, and Reducer
 server = socket(AF_INET, SOCK_STREAM)
 server.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
 server.bind(('', int(myPort)))
 server.listen(10)
-print("Receiving connection from PRM...")
+print("CLI receiving connection from PRM...")
 conn, addr = server.accept()
 myIncomingConnections["prm"] = conn
-print("Connection received")
+print("CLI received connection from PRM")
+
+#Connect to Mapper1
+#map1Port = 5007
+map1Sock = socket(AF_INET, SOCK_STREAM)
+map1Addr = (ip, int(map1Port))
+print("CLI connecting to Mapper1...")
+map1Sock.connect(map1Addr)
+myOutgoingConnections["map1"] = map1Sock
+print("CLI connected to Mapper1")
+
+#Receive connection from Mapper1
+print("CLI receiving connection from Mapper1...")
+map1Conn, map1Addr = server.accept()
+myIncomingConnections["map1"] = map1Conn
+print("CLI received connection from Mapper1")
+
+'''
+#Connect to Mapper2
+#map2Port = 5008
+map2Sock = socket(AF_INET, SOCK_STREAM)
+map2Addr = (ip, int(map2Port))
+print("CLI connecting to Mapper2...")
+map2Sock.connect(map2Addr)
+myOutgoingConnections["map2"] = map2Sock
+print("CLI connected to Mapper2")
+
+#Receive connection from Mapper2
+print("CLI receiving connection from Mapper2...")
+map2Conn, map2Addr = server.accept()
+myIncomingConnections["map2"] = map2Conn
+print("CLI received connection from Mapper2")
+'''
+
+#Connect to Reducer
+#reducerPort = 5005
+reducerSock = socket(AF_INET, SOCK_STREAM)
+reducerAddr = (ip, int(reducerPort))
+print("CLI connecting to Reducer...")
+reducerSock.connect(reducerAddr)
+myOutgoingConnections["reducer"] = reducerSock
+print("CLI connected to Reducer")
+
+#Receive connection from Mapper1
+print("CLI receiving connection from Reducer...")
+reducerConn, reducerAddr = server.accept()
+myIncomingConnections["reducer"] = reducerConn
+print("CLI received connection from Reducer")
 
 #print(myIncomingConnections)
 #print(myOutgoingConnections)
@@ -67,17 +114,19 @@ for line in sys.stdin:
         fname = theLine[1]
         offset = theLine[2]
         size = theLine[3]
+        toSend = fname + " " + offset + " " + size
+        map1Sock.sendall(toSend.encode())
         
     elif(theLine[0] == "reduce"):
         #Reduce funciton, send to reducer
         if(len(theLine) < 2):
             print("Usage: reduce [fname1] [fname2] ...")
             continue
-        files = ""
+        files = "reduce "
         for i in range(1, len(theLine)):
             files += theLine[i] + " "
-        files += "*"
-        #SomeSocket.sendall(files.encode())
+        #files += "*"
+        reducerSock.sendall(files.encode())
         
     elif(theLine[0] == "replicate"):
         #Replicate funciton, send to PRM
@@ -86,7 +135,7 @@ for line in sys.stdin:
             continue
         fname = theLine[1]
         data = "replicate " + fname + "*"
-        sock.sendall(data.encode())  #Send a replicate
+        prmSock.sendall(data.encode())  #Send a replicate
         receive(myIncomingConnections)
         
     elif(theLine[0] == "stop"):
@@ -94,7 +143,7 @@ for line in sys.stdin:
         if(len(theLine) != 1):
             print("Usage: stop")
             continue
-        sock.sendall("stop*".encode())  #Send a stop msg
+        prmSock.sendall("stop*".encode())  #Send a stop msg
         receive(myIncomingConnections)
         
     elif(theLine[0] == "resume"):
@@ -102,7 +151,7 @@ for line in sys.stdin:
         if(len(theLine) != 1):
             print("Usage: resume")
             continue
-        sock.sendall("resume*".encode())
+        prmSock.sendall("resume*".encode())
         receive(myIncomingConnections)
         
     elif(theLine[0] == "total"):
@@ -114,7 +163,7 @@ for line in sys.stdin:
         for i in range(1, len(theLine)):
             data += theLine[i] + " "
         data += "*"
-        sock.sendall(data.encode())
+        prmSock.sendall(data.encode())
         receive(myIncomingConnections)
             
     elif(theLine[0] == "print"):
@@ -122,7 +171,7 @@ for line in sys.stdin:
         if(len(theLine) != 1):
             print("Usage: print")
             continue
-        sock.sendall("print*".encode())
+        prmSock.sendall("print*".encode())
         receive(myIncomingConnections)
 
     elif(theLine[0] == "merge"):
@@ -133,12 +182,12 @@ for line in sys.stdin:
         f1 = theLine[1]
         f2 = theLine[2]
         data = "merge " + f1 + " " + f2 + "*" 
-        sock.sendall(data.encode())
+        prmSock.sendall(data.encode())
     elif(theLine[0] == "quit"):
         #Merge function, send to PRM
         if(len(theLine) != 1):
             print("Usage: quit")
-        sock.sendall("quit*".encode())
+        prmSock.sendall("quit*".encode())
     else:
         print("Command not recognized. Make sure commands don't include capital letters")
         continue
