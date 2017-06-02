@@ -34,6 +34,7 @@ def mapper(fname, offset, size):
         newFile.write(str(words.get(k)))
         newFile.write("\n")
     newFile.close()
+    return
         
 
 myIncomingConnections = []
@@ -66,7 +67,7 @@ while(True):
     if(not data):
         continue
     else:
-        print(data)
+        #print(data)
         dataList = data.split()
         if(dataList[0].find("map") != -1):
             fname = dataList[1]

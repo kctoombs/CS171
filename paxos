@@ -313,7 +313,7 @@ with open(setupFile) as f:
             port = siteData[int(nums[1])-1][1]
             s = socket(AF_INET, SOCK_STREAM)
             addr = (ip, int(port))
-            time.sleep(5)
+            time.sleep(3)
             try:
                 s.connect(addr)
                 print("Connected to ", (nums[1]))
@@ -342,7 +342,7 @@ cliPort = int(siteData[int(mySiteid) - 1][1]) + 3  #3 greater than the port of t
 cliIP = '127.0.0.1'
 s = socket(AF_INET, SOCK_STREAM)
 addr = (cliIP, cliPort)
-time.sleep(5)
+time.sleep(3)
 s.connect(addr)
 outgoingConnections["cli"] = s
 
