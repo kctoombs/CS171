@@ -5,11 +5,15 @@ import select
 from socket import *
 
 PRM = []  #Holds all Paxos instances
+prmBackup = []
 incomingConnections = dict() #Maintains incoming connections
 outgoingConnections = dict() #Maintains outgoing connections
 siteData = []  #Contains IP and Port of all sites in order of siteNum
 isStopped = False  #True if the process is stopped, False otherwise
 numAccepts = dict()
+
+#Have a variable that determines if you are the first propser or not.
+#If youre the first proposer, your value is decided, otherwise, your value will be ignored
 
 class Paxos(object):
 
@@ -110,6 +114,8 @@ def ackWithHighestBal(theList):
 def receive(channels):
     global isStopped
     global numAccepts
+    global PRM
+    global prmBackup
     
     for c in channels.keys():
         sock = channels.get(c)
@@ -119,15 +125,29 @@ def receive(channels):
             #sys.stdout.write("theData: ")
             #print(theData)
             splitData = theData.split("*")
-            sys.stdout.write("splitData: ")
-            print(splitData)
+            if(splitData[0] != ''):
+                sys.stdout.write("splitData: ")
+                print(splitData)
             for data in range(0, len(splitData) - 1):
                 dataList = splitData[data].split()
                 sys.stdout.write("dataList: ")
                 print(dataList)
+                if(dataList[0].find("resume") != -1):
+                    print("resume")
+                    isStopped = False
+                    PRM = prmBackup[:]
+                    for c in outgoingConnections.keys():
+                        if(c == "cli"):
+                            #Send to cli only
+                            sock = outgoingConnections.get(c)
+                            sock.sendall("Process resumed".encode())
                 #Make sure dataList isn't empty
-                if(not dataList or isStopped or dataList[0] == ''):
+                elif(not dataList or isStopped or dataList[0] == ''):
                     print("dataList is empty or process is stopped")
+                    if(isStopped and dataList and dataList[0].find("decide") != -1):
+                        val = dataList[1]
+                        dictionary = dataList[2]
+                        prmBackup.append([val, dictionary])
                     continue
                 elif(dataList[0].find("merge") != -1):
                     print("merge")
@@ -151,7 +171,6 @@ def receive(channels):
                             print(theTotal)
                             sock.sendall(theTotal.encode())
                 elif(dataList[0].find("replicate") != -1):
-                    print("replicate")
                     prmObj.ballotNum[0] += 1   #Increase ballotNum of PRM object
                     prmObj.ballotNum[1] = mySiteid
                     prmObj.proposedVal[0] = dataList[1]  #filename being proposed
@@ -170,14 +189,6 @@ def receive(channels):
                             #Send to cli only
                             sock = outgoingConnections.get(c)
                             sock.sendall("Process stopped".encode())
-                elif(dataList[0].find("resume") != -1):
-                    print("resume")
-                    isStopped = False
-                    for c in outgoingConnections.keys():
-                        if(c == "cli"):
-                            #Send to cli only
-                            sock = outgoingConnections.get(c)
-                            sock.sendall("Process resumed".encode())
                 elif(dataList[0].find("print") != -1):
                     print("print")
                     toSend = printFiles(PRM)
@@ -187,7 +198,6 @@ def receive(channels):
                             sock = outgoingConnections.get(c)
                             sock.sendall(toSend.encode())
                 elif(dataList[0].find("prepare") != -1):
-                    print("prepare")
                     bal = int(dataList[1])    #Ballot
                     siteid = dataList[2] #id of site it came from
                     if(int(prmObj.ballotNum[0]) < bal or (int(prmObj.ballotNum[0]) == bal and int(prmObj.ballotNum[1]) < int(siteid))):
@@ -197,7 +207,6 @@ def receive(channels):
                         sock = outgoingConnections.get(siteid) #Get socket associated w id
                         sock.sendall(toSend.encode())
                 elif(dataList[0].find("ack") != -1):
-                    print("ack")
                     balNum = [dataList[1], dataList[2]]
                     accBal = [dataList[3], dataList[4]]
                     accVal = [dataList[5], dataList[6]]
@@ -205,7 +214,7 @@ def receive(channels):
                     thisAck = [balNum, accBal, accVal, fromSite]
                     prmObj.ackList.append(thisAck)
                     #Check if site has acks from majority
-                    if(len(prmObj.ackList) >= 2):
+                    if(len(prmObj.ackList) + 1 >= 2): # +1 cuz site votes for itself 
                         if(checkIfAcksAreNull(prmObj.ackList)):
                             #If yes and all vals are null, then acceptVal = my initial proposed val
                             prmObj.acceptVal = prmObj.proposedVal[:]
@@ -220,56 +229,83 @@ def receive(channels):
                                 toSend = "accept " + str(prmObj.ballotNum[0]) + " "  + str(prmObj.ballotNum[1]) + " " + prmObj.acceptVal[0] + " " + prmObj.acceptVal[1] + "*"
                                 sock.sendall(toSend.encode())
                 elif(dataList[0].find("accept") != -1):
+                    print("IN ACCEPT")
                     ballot = str(dataList[1]) + str(dataList[2])
-                    if(ballot in numAccepts):
-                        #If its in the dict, increase its count
-                        numAccepts[ballot] += 1
-                    else:
-                        #If its not in the dict, put it in and set its count to 1
-                        numAccepts[ballot] = 1
+                    
                     if(int(prmObj.ballotNum[0]) < int(dataList[1]) or (int(prmObj.ballotNum[0]) == int(dataList[1]) and int(prmObj.ballotNum[1]) < int(dataList[2]))):
                         #Assign ballotNum, acceptBallot, and acceptVal if my ballotNum is less
-                        prmObj.ballotNum[0] = dataList[1]
-                        prmObj.ballotNum[1] = dataList[2]
-                        prmObj.acceptBallot[0] = dataList[1]
-                        prmObj.acceptBallot[1] = dataList[2]
+                        prmObj.ballotNum[0] = int(dataList[1])
+                        prmObj.ballotNum[1] = int(dataList[2])
+                        prmObj.acceptBallot[0] = int(dataList[1])
+                        prmObj.acceptBallot[1] = int(dataList[2])
                         accVal = [dataList[3], dataList[4]]
                         prmObj.acceptVal = accVal[:]
+                        prmObj.leader = False
+                        ballot = str(prmObj.ballotNum[0]) + str(prmObj.ballotNum[1])  #NEW
+                    if(ballot in numAccepts):
+                            #If its in the dict, increase its count
+                            numAccepts[ballot] += 1
+                            print("numAccepts[ballot] += 1")
+                    else:
+                            #If its not in the dict, put it in and set its count to 1
+                            numAccepts[ballot] = 1
+                            print("numAccepts[ballot] = 1")
                     if(numAccepts[ballot] == 1):
-                        #First accept received by this ballotNum b
-                        toSend = "accept " + str(dataList[1]) + " " + str(dataList[2]) + " " + str(dataList[3]) + " " + str(dataList[4]) + "*"
-                        for c in outgoingConnections.keys():
-                            if(c != "cli"):
-                                #Send to everyone except cli
-                                sock = outgoingConnections.get(c)
-                                sock.sendall(toSend.encode())
-                    if(numAccepts[ballot] >= 2 and prmObj.leader):
-                        print("DECIDING VALUE")
-                        #Decide value
-                        PRM.append([prmObj.acceptVal[0], prmObj.acceptVal[1]])
-                        toSend = "decide " + str(prmObj.acceptVal[0]) + " " + str(prmObj.acceptVal[1]) + "*"
-                        for c in outgoingConnections.keys():
-                            if(c != "cli"):
-                                sock = outgoingConnections.get(c)
-                                sock.sendall(toSend.encode())
-                        for c in outgoingConnections.keys():
-                            if(c == "cli"):
-                                toSend = "The winner was " + str(prmObj.acceptVal[0])
-                                sock = outgoingConnections.get(c)
-                                sock.sendall(toSend.encode())
-                        print("Reinstantiate")
-                        prmObj.reinstantiate()
-                        numAccepts.clear()
-                        sys.stdout.write("ackList: ")
-                        print(prmObj.ackList)
+                            print("numAccepts[ballot] == 1")
+                            #First accept received by this ballotNum b
+                            toSend = "accept " + str(dataList[1]) + " " + str(dataList[2]) + " " + str(dataList[3]) + " " + str(dataList[4]) + "*"
+                            for c in outgoingConnections.keys():
+                                if(c != "cli"):
+                                    #Send to everyone except cli
+                                    sock = outgoingConnections.get(c)
+                                    sock.sendall(toSend.encode())
+                            #break; #NEW ***
+
+                    if(int(ballot[0]) == int(prmObj.ballotNum[0]) and int(ballot[1]) == int(prmObj.ballotNum[1])):
+                        print("THEY ARE EQUAL")
+                        if(numAccepts[ballot] >= 1 and prmObj.leader): # >= 2?
+                            print("DECIDING VALUE")
+                            #Decide value
+                            PRM.append([prmObj.acceptVal[0], prmObj.acceptVal[1]])
+                            prmBackup.append([prmObj.acceptVal[0], prmObj.acceptVal[1]])
+                            toSend = "decide " + str(prmObj.acceptVal[0]) + " " + str(prmObj.acceptVal[1]) + "*"
+                            for c in outgoingConnections.keys():
+                                if(c != "cli"):
+                                    sock = outgoingConnections.get(c)
+                                    sock.sendall(toSend.encode())
+                            for c in outgoingConnections.keys():
+                                if(c == "cli"):
+                                    toSend = "The winner was " + str(prmObj.acceptVal[0])
+                                    sock = outgoingConnections.get(c)
+                                    sock.sendall(toSend.encode())
+                            print("Reinstantiate")
+                            prmObj.reinstantiate()
+                            numAccepts.clear()
+                            #Flush out the incoming channels to prepare for the next round
+                            for c in incomingConnections.keys():
+                                sock = channels.get(c)
+                                ready = select.select([sock], [], [], 1)
+                                if(ready[0]):
+                                    theData = sock.recv(1024).decode()
+                            return  # NEW ***
+
                 elif(dataList[0].find("decide") != -1):
                     accVal = [dataList[1], dataList[2]]
                     PRM.append(accVal)
+                    prmBackup.append(accVal)
                     prmObj.reinstantiate()
                     numAccepts.clear()
                     prmObj.printPaxos()
                     sys.stdout.write("Printing PRM: ")
                     print(PRM)
+                    #Flush out the incoming channels to prepare for the next round
+                    for c in incomingConnections.keys():
+                        sock = channels.get(c)
+                        ready = select.select([sock], [], [], 1)
+                        if(ready[0]):
+                            theData = sock.recv(1024).decode()
+            
+                    return # NEW ***
                 elif(dataList[0].find("quit") != -1):
                     #Terminate process
                     for c in outgoingConnections.keys():
@@ -313,7 +349,7 @@ with open(setupFile) as f:
             port = siteData[int(nums[1])-1][1]
             s = socket(AF_INET, SOCK_STREAM)
             addr = (ip, int(port))
-            time.sleep(3)
+            time.sleep(2)
             try:
                 s.connect(addr)
                 print("Connected to ", (nums[1]))
@@ -342,7 +378,7 @@ cliPort = int(siteData[int(mySiteid) - 1][1]) + 3  #3 greater than the port of t
 cliIP = '127.0.0.1'
 s = socket(AF_INET, SOCK_STREAM)
 addr = (cliIP, cliPort)
-time.sleep(3)
+time.sleep(2)
 s.connect(addr)
 outgoingConnections["cli"] = s
 

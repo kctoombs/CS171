@@ -14,6 +14,15 @@ reducerPort = sys.argv[4]
 myIncomingConnections = dict()
 myOutgoingConnections = dict()
 
+def fileToDict(theFile):
+    result = ""
+    with open(theFile) as f:
+        for line in f.readlines():
+            curLine = line.split()
+            result += curLine[0] + " " + curLine[1] + " "
+    return result
+
+
 def receive(channels):
     received = False
     while(not received):
@@ -33,7 +42,7 @@ myPort = sys.argv[1] #First argument is port of CLI
 prmPort = sys.argv[2] #Second argument is port of PRM for this CLI
 prmSock = socket(AF_INET, SOCK_STREAM)
 prmAddr = (ip, int(prmPort))
-time.sleep(5)
+time.sleep(2)
 print("CLI connecting to PRM...")
 prmSock.connect(prmAddr)
 myOutgoingConnections["prm"] = prmSock
