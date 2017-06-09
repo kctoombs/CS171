@@ -64,7 +64,7 @@ def printFiles(theList):
         dataList += " "
     return dataList
 
-
+'''
 def merge(theList):
     #theList in this case is the list of files
     words = dict()
@@ -82,6 +82,25 @@ def merge(theList):
                     words[word] = count
     print(words)
     return words
+'''
+
+def merge(theList):
+    #theList in this case is the list of files
+    words = dict()
+    for string in theList:
+        newList = string.split()
+        for i in range(0, len(newList), 2):
+            word = newList[i]
+            count = int(newList[i+1])
+            if(word in words.keys()):
+                oldCount = words.get(word)
+                newCount = int(oldCount + count)
+                words[word] = newCount
+            else:
+                words[word] = count
+    print(words)
+    return words
+
 
 def total(theList):
     totalCount = 0
@@ -152,8 +171,8 @@ def receive(channels):
                 elif(dataList[0].find("merge") != -1):
                     print("merge")
                     #dataList[1] and dataList[2] are the positions
-                    f1 = PRM[int(dataList[1])][0]
-                    f2 = PRM[int(dataList[2])][0]
+                    f1 = PRM[int(dataList[1])][1]
+                    f2 = PRM[int(dataList[2])][1]
                     fileList = [f1, f2]
                     merge(fileList)
                 elif(dataList[0].find("total") != -1):
@@ -258,6 +277,7 @@ def receive(channels):
                                     sock.sendall(toSend.encode())
                             for c in outgoingConnections.keys():
                                 if(c == "cli"):
+                                    time.sleep(1)
                                     toSend = "The winner was " + str(prmObj.acceptVal[0])
                                     sock = outgoingConnections.get(c)
                                     sock.sendall(toSend.encode())
