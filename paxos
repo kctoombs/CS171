@@ -85,7 +85,6 @@ def merge(theList):
 '''
 
 def merge(theList):
-    #theList in this case is the list of files
     words = dict()
     for string in theList:
         newList = string.split()
@@ -101,7 +100,7 @@ def merge(theList):
     print(words)
     return words
 
-
+'''
 def total(theList):
     totalCount = 0
     for filename in theList:
@@ -112,6 +111,17 @@ def total(theList):
                 count = int(currentLine[1])
                 totalCount += count
     return totalCount
+'''
+
+def total(theList):
+    total = 0
+    for string in theList:
+        newList = string.split()
+        for i in range(0, len(newList), 2):
+            total += int(newList[i+1])
+    #print(total)
+    return total
+
 
 def checkIfAcksAreNull(theList):
     for ack in theList:
@@ -179,7 +189,7 @@ def receive(channels):
                     print("total")
                     fileList = []
                     for i in range(1, len(dataList)):
-                        f = PRM[int(dataList[i])][0]
+                        f = PRM[int(dataList[i])][1]
                         fileList.append(f)
                     theTotal = str(total(fileList))
                     for c in outgoingConnections.keys():
@@ -187,7 +197,6 @@ def receive(channels):
                             print("CLI KEY")
                             #Send to cli only
                             sock = outgoingConnections.get(c)
-                            print(theTotal)
                             sock.sendall(theTotal.encode())
                 elif(dataList[0].find("replicate") != -1):
                     prmObj.ballotNum[0] = 1   #Increase ballotNum of PRM object
