@@ -174,6 +174,11 @@ def receive(channels):
                     prmObj.ballotNum[0] = 1   #Increase ballotNum of PRM object
                     prmObj.ballotNum[1] = mySiteid
                     prmObj.proposedVal[0] = dataList[1]  #filename being proposed
+                    dictionary = ""
+                    for i in range(2, len(dataList)):
+                        dictionary += dataList[i]
+                        dictionary += " "
+                    prmObj.proposedVal[1] = dictionary
                     prmObj.leader = True
                     toSend = "prepare " + str(prmObj.ballotNum[0]) + " " + str(prmObj.ballotNum[1]) + "*"
                     for c in outgoingConnections.keys():
@@ -201,6 +206,7 @@ def receive(channels):
                     bal = int(dataList[1])    #Ballot
                     siteid = dataList[2] #id of site it came from
                     if(int(prmObj.ballotNum[0]) < bal or (int(prmObj.ballotNum[0]) == bal and int(prmObj.ballotNum[1]) < int(siteid))):
+                        print("Ballot num less in prepare")
                         prmObj.ballotNum[0] = bal
                         prmObj.ballotNum[1] = siteid
                         toSend = "ack " + str(prmObj.ballotNum[0]) + " "  + str(prmObj.ballotNum[1]) + " " + str(prmObj.acceptBallot[0]) + " " + str(prmObj.acceptBallot[1]) + " " + prmObj.acceptVal[0] + " " + prmObj.acceptVal[1] + " "  + mySiteid + "*"
@@ -232,7 +238,7 @@ def receive(channels):
                     print("IN ACCEPT")
                     ballot = str(dataList[1]) + str(dataList[2])
 
-                    if(int(ballot[0]) == int(prmObj.ballotNum[0]) and int(ballot[1]) == int(prmObj.ballotNum[1]) and prmObj.leader):
+                    if(int(ballot[0]) == int(prmObj.ballotNum[0]) and int(ballot[1]) == int(prmObj.ballotNum[1]) and prmObj.leader and ballot[1] == mySiteid):
                         if(ballot in numAccepts):
                             #If its in the dict, increase its count
                             numAccepts[ballot] += 1
@@ -268,11 +274,15 @@ def receive(channels):
                     
                     elif(int(prmObj.ballotNum[0]) < int(dataList[1]) or (int(prmObj.ballotNum[0]) == int(dataList[1]) and int(prmObj.ballotNum[1]) <= int(dataList[2]))):
                         #Assign ballotNum, acceptBallot, and acceptVal if my ballotNum is less
+                        dictionary = ""
+                        for i in range(4, len(dataList)):
+                            dictionary += dataList[i]
+                            dictionary += " "
                         prmObj.ballotNum[0] = int(dataList[1])
                         prmObj.ballotNum[1] = int(dataList[2])
                         prmObj.acceptBallot[0] = int(dataList[1])
                         prmObj.acceptBallot[1] = int(dataList[2])
-                        accVal = [dataList[3], dataList[4]]
+                        accVal = [dataList[3], dictionary]
                         prmObj.acceptVal = accVal[:]
                         prmObj.leader = False
                         ballot = str(prmObj.ballotNum[0]) + str(prmObj.ballotNum[1])  #NEW
@@ -287,55 +297,25 @@ def receive(channels):
                         if(numAccepts[ballot] == 1):
                             print("numAccepts[ballot] == 1")
                             #First accept received by this ballotNum b
-                            toSend = "accept " + str(dataList[1]) + " " + str(dataList[2]) + " " + str(dataList[3]) + " " + str(dataList[4]) + "*"
+                            toSend = "accept " + str(dataList[1]) + " " + str(dataList[2]) + " " + str(dataList[3]) + " " + dictionary + "*"
                             for c in outgoingConnections.keys():
                                 if(c != "cli"):
                                     #Send to everyone except cli
                                     sock = outgoingConnections.get(c)
                                     sock.sendall(toSend.encode())
                         #break; #NEW ***
-                        '''
-                    elif(int(ballot[0]) == int(prmObj.ballotNum[0]) and int(ballot[1]) == int(prmObj.ballotNum[1])):
-                        if(ballot in numAccepts):
-                            #If its in the dict, increase its count
-                            numAccepts[ballot] += 1
-                        else:
-                            #If its not in the dict, put it in and set its count to 1
-                            numAccepts[ballot] = 1
-                        print("THEY ARE EQUAL")
-                        if(numAccepts[ballot] >= 1 and prmObj.leader): # >= 2?
-                            print("DECIDING VALUE")
-                            #Decide value
-                            PRM.append([prmObj.acceptVal[0], prmObj.acceptVal[1]])
-                            prmBackup.append([prmObj.acceptVal[0], prmObj.acceptVal[1]])
-                            toSend = "decide " + str(prmObj.acceptVal[0]) + " " + str(prmObj.acceptVal[1]) + "*"
-                            for c in outgoingConnections.keys():
-                                if(c != "cli"):
-                                    sock = outgoingConnections.get(c)
-                                    sock.sendall(toSend.encode())
-                            for c in outgoingConnections.keys():
-                                if(c == "cli"):
-                                    toSend = "The winner was " + str(prmObj.acceptVal[0])
-                                    sock = outgoingConnections.get(c)
-                                    sock.sendall(toSend.encode())
-                            print("Reinstantiate")
-                            prmObj.reinstantiate()
-                            numAccepts.clear()
-                            #Flush out the incoming channels to prepare for the next round
-                            for c in incomingConnections.keys():
-                                sock = channels.get(c)
-                                ready = select.select([sock], [], [], 1)
-                                if(ready[0]):
-                                    theData = sock.recv(1024).decode()
-                            return  # NEW ***
-                        '''
+
                 elif(dataList[0].find("decide") != -1):
-                    accVal = [dataList[1], dataList[2]]
+                    dictionary = ""
+                    for i in range(2, len(dataList)):
+                        dictionary += dataList[i]
+                        dictionary += " "
+                    accVal = [dataList[1], dictionary]
                     PRM.append(accVal)
                     prmBackup.append(accVal)
                     prmObj.reinstantiate()
                     numAccepts.clear()
-                    prmObj.printPaxos()
+                    #prmObj.printPaxos()
                     sys.stdout.write("Printing PRM: ")
                     print(PRM)
                     #Flush out the incoming channels to prepare for the next round

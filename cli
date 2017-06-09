@@ -51,7 +51,7 @@ print("CLI connected to PRM")
 #Initialize server for PRM, Mappers, and Reducer
 server = socket(AF_INET, SOCK_STREAM)
 server.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
-server.bind(('', int(myPort)))
+server.bind(('0.0.0.0', int(myPort)))
 server.listen(10)
 print("CLI receiving connection from PRM...")
 conn, addr = server.accept()
@@ -143,7 +143,8 @@ for line in sys.stdin:
             print("Usage: replicate [filename]")
             continue
         fname = theLine[1]
-        data = "replicate " + fname + "*"
+        dictionary = fileToDict(fname)  #Convert dict of file to a string
+        data = "replicate " + fname + " " + dictionary + "*"
         prmSock.sendall(data.encode())  #Send a replicate
         receive(myIncomingConnections)
         
