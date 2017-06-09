@@ -7,9 +7,11 @@ from socket import *
 #2nd and 3rd arguments will be ports of mappers.
 #4th argument will be port of reducer.
 
-map1Port = sys.argv[3]
-#map2Port = sys.argv[4]
-reducerPort = sys.argv[4]
+myPort = 5001
+map1Port = 5002
+map2Port = 5003
+reducerPort = 5004
+prmPort = 5005 
 
 myIncomingConnections = dict()
 myOutgoingConnections = dict()
@@ -38,8 +40,6 @@ def receive(channels):
 
 #Connect to PRM
 ip = '127.0.0.1'
-myPort = sys.argv[1] #First argument is port of CLI
-prmPort = sys.argv[2] #Second argument is port of PRM for this CLI
 prmSock = socket(AF_INET, SOCK_STREAM)
 prmAddr = (ip, int(prmPort))
 time.sleep(2)
@@ -59,7 +59,6 @@ myIncomingConnections["prm"] = conn
 print("CLI received connection from PRM")
 
 #Connect to Mapper1
-#map1Port = 5007
 map1Sock = socket(AF_INET, SOCK_STREAM)
 map1Addr = (ip, int(map1Port))
 print("CLI connecting to Mapper1...")
@@ -73,9 +72,8 @@ map1Conn, map1Addr = server.accept()
 myIncomingConnections["map1"] = map1Conn
 print("CLI received connection from Mapper1")
 
-'''
+
 #Connect to Mapper2
-#map2Port = 5008
 map2Sock = socket(AF_INET, SOCK_STREAM)
 map2Addr = (ip, int(map2Port))
 print("CLI connecting to Mapper2...")
@@ -88,10 +86,9 @@ print("CLI receiving connection from Mapper2...")
 map2Conn, map2Addr = server.accept()
 myIncomingConnections["map2"] = map2Conn
 print("CLI received connection from Mapper2")
-'''
+
 
 #Connect to Reducer
-#reducerPort = 5005
 reducerSock = socket(AF_INET, SOCK_STREAM)
 reducerAddr = (ip, int(reducerPort))
 print("CLI connecting to Reducer...")
@@ -107,8 +104,6 @@ print("CLI received connection from Reducer")
 
 #print(myIncomingConnections)
 #print(myOutgoingConnections)
-
-#Call receive after every command instead of running a thread in the background
             
 
 #Set up command line interface

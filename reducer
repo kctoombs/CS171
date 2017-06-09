@@ -34,14 +34,13 @@ myIncomingConnections = []
 myOutgoingConnections = []
 
 ip = '127.0.0.1'
-port = sys.argv[1]
-cliPort = sys.argv[2]
-#port = 5005
+port = 5004
+cliPort = 5001
 
 #Listen for connection from CLI
 server = socket(AF_INET, SOCK_STREAM)
 server.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
-server.bind(('', int(port)))
+server.bind(('0.0.0.0', int(port)))
 server.listen(5)
 conn, addr = server.accept()
 myIncomingConnections.append(conn)

@@ -64,25 +64,6 @@ def printFiles(theList):
         dataList += " "
     return dataList
 
-'''
-def merge(theList):
-    #theList in this case is the list of files
-    words = dict()
-    for filename in theList:
-        with open(filename) as f:
-            for line in f.readlines():
-                currentLine = line.split()
-                word = currentLine[0]
-                count = int(currentLine[1])
-                if(word in words.keys()):
-                    oldCount = words.get(word)
-                    newCount = int(oldCount + count)
-                    words[word] = newCount
-                else:
-                    words[word] = count
-    print(words)
-    return words
-'''
 
 def merge(theList):
     words = dict()
@@ -100,18 +81,6 @@ def merge(theList):
     print(words)
     return words
 
-'''
-def total(theList):
-    totalCount = 0
-    for filename in theList:
-        with open(filename) as f:
-            for line in f.readlines():
-                currentLine = line.split()
-                #word = currentLine[0]
-                count = int(currentLine[1])
-                totalCount += count
-    return totalCount
-'''
 
 def total(theList):
     total = 0
@@ -374,6 +343,7 @@ prmObj = Paxos()
 
 
 #Initialize server
+port = 5005
 server = socket(AF_INET, SOCK_STREAM)
 server.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
 
@@ -387,7 +357,8 @@ with open(setupFile) as f:
         line = f.readline().strip().split()
         siteData.append([data for data in line])
     
-    server.bind(('0.0.0.0', int(siteData[int(mySiteid) - 1][1])))
+    server.bind(('0.0.0.0', port)) #int(siteData[int(mySiteid) - 1][1])
+    server.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
     server.listen(10)
     
     for line in f.readlines():
@@ -398,11 +369,12 @@ with open(setupFile) as f:
             port = siteData[int(nums[1])-1][1]
             s = socket(AF_INET, SOCK_STREAM)
             addr = (ip, int(port))
-            time.sleep(2)
+            time.sleep(3)
             try:
                 s.connect(addr)
                 print("Connected to ", (nums[1]))
             except error:
+                print("IN EXCEPT")
                 time.sleep(2)
             #Add socket to outgoing connections
             outgoingConnections[nums[1]] = s
@@ -423,7 +395,7 @@ incomingConnections["cli"] = conn
 
 
 #Open a connection with the CLI
-cliPort = int(siteData[int(mySiteid) - 1][1]) + 3  #3 greater than the port of this site
+cliPort = 5001 #int(siteData[int(mySiteid) - 1][1]) + 3  #3 greater than the port of this site
 cliIP = '127.0.0.1'
 s = socket(AF_INET, SOCK_STREAM)
 addr = (cliIP, cliPort)
