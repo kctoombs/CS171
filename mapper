@@ -66,7 +66,7 @@ myOutgoingConnections = []
 ip = '127.0.0.1'
 cliPort = 5001
 myid = int(sys.argv[1])
-print(myid)
+
 if(myid == 1):
     port = 5002
 if(myid == 2):

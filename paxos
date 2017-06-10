@@ -99,6 +99,7 @@ def checkIfAcksAreNull(theList):
     return True
 
 def ackWithHighestBal(theList):
+    print(theList)
     balNum = 0
     siteid = 0
     highest = [0, 0]
@@ -201,7 +202,7 @@ def receive(channels):
                             sock.sendall(toSend.encode())
                 elif(dataList[0].find("prepare") != -1):
                     bal = int(dataList[1])    #Ballot
-                    siteid = dataList[2] #id of site it came from
+                    siteid = dataList[2]      #id of site it came from
                     if(int(prmObj.ballotNum[0]) < bal or (int(prmObj.ballotNum[0]) == bal and int(prmObj.ballotNum[1]) < int(siteid))):
                         print("Ballot num less in prepare")
                         prmObj.ballotNum[0] = bal
@@ -311,11 +312,17 @@ def receive(channels):
                     accVal = [dataList[1], dictionary]
                     PRM.append(accVal)
                     prmBackup.append(accVal)
-                    prmObj.reinstantiate()
                     numAccepts.clear()
                     #prmObj.printPaxos()
                     sys.stdout.write("Printing PRM: ")
                     print(PRM)
+                    for c in outgoingConnections.keys():
+                        if(c == "cli" and prmObj.proposedVal[0] != "-1"):
+                            time.sleep(1)
+                            toSend = "The winner was " + str(dataList[1])
+                            sock = outgoingConnections.get(c)
+                            sock.sendall(toSend.encode())
+                    prmObj.reinstantiate()
                     #Flush out the incoming channels to prepare for the next round
                     for c in incomingConnections.keys():
                         sock = channels.get(c)
