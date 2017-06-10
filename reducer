@@ -67,3 +67,6 @@ while(True):
                 f = dataList[i]
                 fileList.append(f)
             reducer(fileList, fname)
+            sendSock = myOutgoingConnections[0]
+            toSend = "Reducer done."
+            sendSock.sendall(toSend.encode())

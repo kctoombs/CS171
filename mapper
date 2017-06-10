@@ -12,6 +12,14 @@ def mapper(fname, offset, size):
     text = ""
     #Open file and seek to the offset
     f = open(fname, "r")
+    entireFile = f.read().replace('\n', '')
+    #Check if we're at the beginning of a word (but not the first word)
+    #print(entireFile[offset])
+    if(offset > 0):
+        if(entireFile[offset - 1] == ' ' and entireFile[offset] != ' '):
+            offset -= 1
+            size += 1
+            
     f.seek(offset)
     #Continue reading file for size characters and store in a string
     for i in range(size):
@@ -41,7 +49,8 @@ def mapper(fname, offset, size):
         else:
             words[theWord] = 1
     #Write the dictionary to the file
-    newFile = open(fname + "_I_" + myid, "w")
+    newFname = fname.split('.')[0]
+    newFile = open(newFname + "_I_" + str(myid), "w")
     for k in words.keys():
         newFile.write(str(k))
         newFile.write(" ")
@@ -62,7 +71,7 @@ if(myid == 1):
     port = 5002
 if(myid == 2):
     port = 5003
-print(port)
+
 #Listen for connection from CLI
 server = socket(AF_INET, SOCK_STREAM)
 server.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
@@ -88,6 +97,10 @@ while(True):
         dataList = data.split()
         if(dataList[0].find("map") != -1):
             fname = dataList[1]
-            offset = int(dataList[2])
-            size = int(dataList[3])
+            size = int(dataList[2])
+            offset = int(dataList[3])
             mapper(fname, offset, size)
+            sendSock = myOutgoingConnections[0]
+            thisMapper = "Mapper " + str(myid)
+            toSend = thisMapper + " done."
+            sendSock.sendall(toSend.encode())

@@ -2,6 +2,7 @@
 import sys
 import time
 import select
+import os
 from socket import *
 
 #2nd and 3rd arguments will be ports of mappers.
@@ -36,6 +37,15 @@ def receive(channels):
                 print(theData)
                 received = True
     return
+
+#Splits file in half and determines size and offset parameters for the mappers
+def splitFile(fname):
+    fSize = os.path.getsize(fname) - 1
+    f1Size = fSize//2        #Use integer division
+    f2Size = fSize - f1Size  #In the case of an odd numbered size
+    f1Offset = 0             #Offset for 1st mapper
+    f2Offset = f1Size        #Offset for 2nd mapper
+    return f1Size, f1Offset, f2Size, f2Offset
 
 
 #Connect to PRM
@@ -112,14 +122,16 @@ for line in sys.stdin:
 
     if(theLine[0] == "map"):
         #Map function, send to one of the mappers
-        if(len(theLine) != 4):
-            print("Usage: map [file] [offset] [size]")
+        if(len(theLine) != 2):
+            print("Usage: map [file]")
             continue
         fname = theLine[1]
-        offset = theLine[2]
-        size = theLine[3]
-        toSend = "map " + fname + " " + offset + " " + size
+        f1Size, f1Offset, f2Size, f2Offset = splitFile(fname)
+        toSend = "map " + fname + " " + str(f1Size) + " " + str(f1Offset)
+        toSend2 = "map " + fname + " "+  str(f2Size) + " " + str(f2Offset)
         map1Sock.sendall(toSend.encode())
+        map2Sock.sendall(toSend2.encode())
+        receive(myIncomingConnections)
         
     elif(theLine[0] == "reduce"):
         #Reduce funciton, send to reducer
@@ -131,6 +143,7 @@ for line in sys.stdin:
             files += theLine[i] + " "
         #files += "*"
         reducerSock.sendall(files.encode())
+        receive(myIncomingConnections)
         
     elif(theLine[0] == "replicate"):
         #Replicate funciton, send to PRM
