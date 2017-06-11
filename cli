@@ -28,7 +28,13 @@ def fileToDict(theFile):
 
 def receive(channels):
     received = False
+    now = time.time()   #Current time
+    future = now + 10
+    #Time out feature
     while(not received):
+        if(time.time() > future):
+            print("Command timed out")
+            return
         for c in channels.keys():
             sock = channels.get(c)
             ready = select.select([sock], [], [], 1)

@@ -120,7 +120,7 @@ def receive(channels):
         sock = channels.get(c)
         ready = select.select([sock], [], [], 1)
         if(ready[0]):
-            theData = sock.recv(1024).decode()
+            theData = sock.recv(10000).decode()
             #sys.stdout.write("theData: ")
             #print(theData)
             splitData = theData.split("*")
