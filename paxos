@@ -104,7 +104,7 @@ def ackWithHighestBal(theList):
     siteid = 0
     highest = [0, 0]
     for ack in theList:
-        if(int(ack[0][0]) > balNum or(int(ack[0][0]) == balNum and int(ack[0][1]) > siteid)):
+        if(int(ack[0][0]) > int(balNum) or(int(ack[0][0]) == int(balNum) and int(ack[0][1]) > int(siteid))):
             balNum = ack[0][0]
             siteid = ack[0][1]
             highest = [balNum, siteid]
