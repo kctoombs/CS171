@@ -126,7 +126,7 @@ def receive(channels):
             #sys.stdout.write("theData: ")
             #print(theData)
             splitData = theData.split("*")
-            if(splitData[0] != ''):
+            #if(splitData[0] != ''):
                 #sys.stdout.write("splitData: ")
                 #print(splitData)
             for data in range(0, len(splitData) - 1):
