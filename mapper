@@ -14,7 +14,6 @@ def mapper(fname, offset, size):
     f = open(fname, "r")
     entireFile = f.read().replace('\n', '')
     #Check if we're at the beginning of a word (but not the first word)
-    #print(entireFile[offset])
     if(offset > 0):
         if(entireFile[offset - 1] == ' ' and entireFile[offset] != ' '):
             offset -= 1

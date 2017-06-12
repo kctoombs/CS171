@@ -117,9 +117,6 @@ print("CLI receiving connection from Reducer...")
 reducerConn, reducerAddr = server.accept()
 myIncomingConnections["reducer"] = reducerConn
 print("CLI received connection from Reducer")
-
-#print(myIncomingConnections)
-#print(myOutgoingConnections)
             
 
 #Set up command line interface
