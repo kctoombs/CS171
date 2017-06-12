@@ -29,7 +29,7 @@ def fileToDict(theFile):
 def receive(channels):
     received = False
     now = time.time()   #Current time
-    future = now + 10
+    future = now + 12
     #Time out feature
     while(not received):
         if(time.time() > future):
