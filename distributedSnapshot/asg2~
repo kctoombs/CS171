@@ -1,0 +1,248 @@
+#!/usr/bin/env python3
+import sys
+import threading
+import errno
+import time
+import select
+from socket import *
+from queue import *
+
+#All processes start with a balance of 10
+balance = 10
+
+snapshotid = 0
+
+#Queue to hold incoming messages
+q = Queue()
+
+#Holds number of incoming connections
+incomingConnections = 0
+
+#Incoming Connections
+myIncomingConnections = dict()
+
+#Keeps track of markers from incoming channels
+incomingMarkers = dict()
+
+#Keeps track of the state of incoming channels during a snapshot
+incomingChannelState = dict()
+
+#Holds the sockets that this site has connected to
+myOutgoingConnections = dict()
+
+#Keeps track of which sites have finished with their command file
+finishedSites = dict()
+
+#Outgoing connections
+connectionList = []
+
+savedState = 0
+
+mySnapshot = False #Says whether this site initiated the snapshot 
+
+snapString = ""  #String representation of the snapshot
+
+#Get arguments from command line. 1st arg is process id,
+#2nd arg is setup file, 3rd arg is command file
+if(len(sys.argv) != 4):
+    sys.exit("Incorrect number of arguments. Exiting...")
+
+siteid = sys.argv[1]
+setupFile = sys.argv[2]
+commandFile = sys.argv[3]
+
+#siteData[i-1] holds the info of site i
+siteData = [] #Contains IP and portNum of all sites
+
+server = socket(AF_INET, SOCK_STREAM)
+server.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+
+def receive(channels, myBalance):
+    global savedState
+    global balance
+    global snapString
+    for c in channels.keys():
+            sock = channels.get(c)
+            sock.setblocking(0)
+            ready = select.select([sock], [], [], 1)
+            if(ready[0]):
+                    theData = sock.recv(1024).decode()
+                    splitData = theData.split("*")
+                    for data in splitData:
+                            #sys.stdout.write("Data: ")
+                            #print(data)
+                            if(str(data).find("MARKER") != -1):
+                                    print("MARKER Received from ", (c))
+                                    incomingMarkers[int(c)] = incomingMarkers.get(c) + 1
+                                    if(incomingMarkers.get(c) == 1):
+                                            if(mySnapshot == True):
+                                                    isFinished = checkIfSnapshotFinished(incomingMarkers, 1)
+                                                    if(isFinished):
+                                                            sys.stdout.write(snapString + str(savedState) + " ")
+                                                            printChannels(incomingChannelState)
+                                            else:
+                                                    savedState = balance
+                                                    #Send markers to neighbors
+                                                    for c in myOutgoingConnections.keys():
+                                                            myOutgoingConnections.get(c).sendall("MARKER*".encode())
+                                                            print("Sending marker to {}".format(c))
+
+                                    if(incomingMarkers.get(c) == 2):
+                                            #Snapshot is over
+                                            isFinished = checkIfSnapshotFinished(incomingMarkers, 2)
+                                            if(isFinished):
+                                                    sys.stdout.write(snapString + str(savedState) + " ")
+                                                    printChannels(incomingChannelState)
+
+                            elif(str(data).find("DONE") != -1):
+                                    splitData = data.strip().split()
+                                    sys.stdout.write("splitData: ")
+                                    print(splitData)
+                                    finishedSite = splitData[1]
+                                    finishedSites[finishedSite] = 1
+                            elif(str(data).find(":") != -1):
+                                    snapString = str(data)
+                                    sendSnapString(myOutgoingConnections, snapString + "*")
+                            elif(str(data) != ''):
+                                    #Number received
+                                    print("Got {} from {}".format(data, c))
+                                    if(incomingMarkers.get(c) == 1):
+                                            #In middle of snapshot. Save incoming messages
+                                            incomingChannelState[int(c)] = incomingChannelState.get(c)+ int(data)
+                                    balance += int(data)
+                                    continue
+                            else:
+                                    #print(data)
+                                    continue
+    return
+
+def checkIfSnapshotFinished(channels, numMarkers):
+    for c in channels.keys():
+            if(channels.get(c) != numMarkers):
+                    return False
+    #If we made it here, this site has received 2 markers from all incoming channels
+    for c in channels.keys():
+            channels[int(c)] = 0  #Reset marker count
+    return True
+
+#Prints the state of the incoming channels 
+def printChannels(channels):
+    #sys.stdout.write(snapString)
+    for c in channels.keys():
+            sys.stdout.write(str(channels.get(c)) + " ")
+            channels[int(c)] = 0  #Reset the state of the channel
+    sys.stdout.write('\n')
+def sendSnapString(outgoing, snapString):
+    for c in outgoing.keys():
+            outgoing.get(c).sendall(snapString.encode())
+
+#Setup file
+with open(setupFile) as f:
+        numSites = f.readline() #First line is number of sites
+        #Append IPs and portNums to siteData
+        for i in range(int(numSites)):
+                line = f.readline().strip().split()
+                siteData.append([data for data in line])
+                #print(siteData)
+        server.bind(('', int(siteData[int(siteid) - 1][1])))
+        server.listen(10)
+
+        for line in f.readlines():
+                #If the first number in the pair corresponds to this site,
+                #then open up a TCP connection
+                nums = line.strip().split()
+                if(nums[0] == siteid):
+                        connectionList.append(nums)
+                        ip = siteData[int(nums[1])-1][0]
+                        port = siteData[int(nums[1])-1][1]
+                        #print(ip)
+                        #print(port)
+                        s = socket(AF_INET, SOCK_STREAM)
+                        addr = (ip, int(port))
+                        time.sleep(3)
+                        try:
+                                s.connect(addr)
+                                print("Connected to ", (nums[1]))
+                        except error:
+                                time.sleep(2)
+                                
+                        #print('Connected on port:', s.getsockname()[1])
+                        #Key is site number, value is socket
+                        myOutgoingConnections[int(nums[1])] = s
+                        #sys.stdout.write("Outgoing: ")
+                        #print(myOutgoingConnections)
+                if(nums[1] == siteid):
+                        #Incoming connection
+                        incomingConnections += 1
+                        conn, addr = server.accept() #Must accept the number of times as there are connections
+                        print("Got connection from ", (nums[0]))
+                        myIncomingConnections[int(nums[0])] = conn
+                        incomingMarkers[int(nums[0])] = 0
+                        incomingChannelState[int(nums[0])] = 0
+                        #sys.stdout.write("Incoming: ")
+                        #print(myIncomingConnections)
+time.sleep(3)
+
+#Command file
+with open(commandFile) as f:
+    for line in f.readlines():
+            theLine = line.strip().split()
+            if(theLine[0] == "send"):
+#Get the socket from the dictionary. The connection has already been established in setup file
+                    sock = myOutgoingConnections.get(int(theLine[1])) 
+                    amount = theLine[2]  #Amount to send the site
+                    print("Sending {} to {}".format(amount, theLine[1]))
+                    sock.sendall((amount + "*").encode())  #Send the money
+                    balance -= int(amount)
+            elif(theLine[0] == "sleep"):
+                    #Sleep command
+                    sleepTime = float(theLine[1])
+                    while(sleepTime > 0):
+                            time.sleep(0.2)
+                            sleepTime -= 0.2
+                            receive(myIncomingConnections, balance)
+            elif(theLine[0] == "snapshot"):
+#Snapshot. A snapshot consists of the local state as well as the state of all incoming channels
+                    print("Snapshot")
+                    mySnapshot = True  #Indicate this is the site initiating the snapshot
+                    snapshotid += 1
+                    savedState = balance
+                    thisSnap = str(siteid) + "." + str(snapshotid) + ": "
+                    #markerWithSite = "MARKER " + siteid
+                    #Send markers to all outgoing channels
+                    for c in myOutgoingConnections.keys():
+                            myOutgoingConnections.get(c).sendall((thisSnap + "*").encode())
+                            myOutgoingConnections.get(c).sendall("MARKER*".encode())
+            receive(myIncomingConnections, balance)
+print("I am done reading the command file")
+
+sleeper = 5
+while(sleeper > 0):
+        time.sleep(0.2)
+        sleeper -= 0.2
+        receive(myIncomingConnections, balance)
+
+finishedSites[siteid] = 1                
+
+#We are now done with the command file. Let other sites know.
+for c in myOutgoingConnections.keys():
+    finished = "DONE " + str(siteid)
+    myOutgoingConnections.get(c).sendall((finished + "*").encode())
+    print("Sending DONE to: ", (int(c)))
+
+
+#count = 0        
+while(len(finishedSites) < len(myIncomingConnections) + 1):
+    #print(len(finishedSites))
+    #count += 1
+    receive(myIncomingConnections, balance)
+    time.sleep(0.5)
+    #if(count > 10):
+            #break
+
+#Close all socket connections at the end
+for c in myOutgoingConnections.keys():
+    myOutgoingConnections.get(c).close()
+
+
+#Site 1 is ending execution and exiting, so other sites are stuck trying to recv 
