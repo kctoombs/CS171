@@ -1,0 +1,112 @@
+#!/usr/bin/env python3
+import sys
+import threading
+import errno
+import time
+from socket import *
+from queue import *
+
+#Local counter
+counter = 0
+
+#Shared Queue
+q = Queue(maxsize=1)
+
+#List containing lamport clock values
+clockVals = []
+
+#Boolean that describes whether the socket connected successfully or not
+didConnect = False
+
+#Get arguments from command line. 1st arg is port number, 2nd arg is filename
+if(len(sys.argv) != 3):
+    sys.exit("Incorrect number of arguments. Exiting...")
+
+portNum = sys.argv[1]
+f = open(str(sys.argv[2]))
+
+
+#Reference: http://sebastiandahlgren.se/2014/06/27/running-a-method-as-a-background-thread-in-python
+
+class ThreadingExample(object):
+    def run(self):
+        """ Thread listening for calls """
+        port = int(portNum)
+        Socket = socket(AF_INET, SOCK_STREAM)
+        Socket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+        Socket.bind(('', port))
+        Socket.listen(5)
+        while True:
+            stream, addr = Socket.accept()
+            data = stream.recv(100).decode()
+            num = int(data)
+            q.put(num)
+            stream.close()
+
+            
+    def __init__(self, interval=1):
+
+        self.interval = interval
+        
+        thread = threading.Thread(target=self.run, args=())
+        thread.daemon = True       
+        thread.start()            
+
+#End reference
+        
+#Start the communication thread                       
+example = ThreadingExample()
+
+
+#Read file line by line
+line = f.readline().split(" ")
+while(line[0] != ''):
+    if(line[0] == "call"):
+        
+        #print("Call made")
+        counter += 1
+        ip = line[1]    #IP address 
+        port = int(line[2])  #Port number
+        #print(ip)
+        #print(port)
+
+        #Create the socket and send the message
+        s = socket(AF_INET, SOCK_STREAM)
+        addr = (ip, port)
+        time.sleep(5)
+        s.connect(addr)
+        message = str(counter + 1).encode()
+        s.send(message)
+        s.close()
+        clockVals.append(counter)
+        #print(counter)
+        
+    elif(line[0] == "receive"):
+        #print("Receive called")
+        counter += 1
+        receivedNum = q.get()
+        actualVal = max(counter, receivedNum)
+        clockVals.append(actualVal)
+        counter = actualVal
+        #print("Actualval " , actualVal)
+    else:
+       counter += 1
+       clockVals.append(counter)
+       #print(counter)
+    #print(line)
+    line = f.readline().split(" ")
+f.close()
+
+#Print out all numbers in the clockVals list
+#for number in clockVals:
+ #   sys.stdout.write(str(number) + " ")
+
+i = 0
+while(i < len(clockVals)):
+    if(i == (len(clockVals) - 1)):
+        sys.stdout.write(str(number))
+    else:
+        sys.stdout.write(str(number) + " ")
+            
+    
+#When a send is made, send the current clock value of the local process

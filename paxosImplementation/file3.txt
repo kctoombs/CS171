@@ -1,0 +1,3 @@
+dog 2
+cow 4
+cat 2
